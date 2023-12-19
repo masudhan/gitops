@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sitemaintenance.fullname" . }}
+  labels:
+    {{- include "sitemaintenance.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "sitemaintenance.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "sitemaintenance.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- include "sitemaintenance.imagePullSecrets" . | indent 6 }}                  
+      containers:
+        - name: {{ .Chart.Name }}          
+          image: "{{ include "sitemaintenance.image" . }}"
+          env:
+            - name: SITE_MESSAGE
+              value: "{{.Values.message}}"
+            - name: SITE_HEADLINE
+              value: "{{.Values.headline}}"
+            - name: SITE_TEAM_NAME
+              value: "{{.Values.teamName}}"
+            - name: SITE_TITLE
+              value: "{{.Values.title}}"  
+          imagePullPolicy: {{ .Values.image.pullPolicy }}                 
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          livenessProbe:
+            tcpSocket:              
+              port: http
+            initialDelaySeconds: 3
+            timeoutSeconds: 1            
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 80
+            initialDelaySeconds: 3
+            timeoutSeconds: 1            
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
